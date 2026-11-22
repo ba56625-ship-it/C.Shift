@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <title>حاسبة الشيفتات | كافتيريا LG - G - M</title>
+  <link rel="stylesheet" href="fonts.css" />
+  <link rel="stylesheet" href="tailwind.css" />
+  <style>
+    body {
+      font-family: 'Cairo', sans-serif;
+      background-color: #f1f5f9;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior-y: none;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type="number"] {
+      -moz-appearance: textfield;
+    }
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .toast-animate {
+      animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    /* انتقال سلس لتقليص البانر العلوي عند التمرير للأسفل */
+    #main-header {
+      transition: background-color 0.25s ease, box-shadow 0.25s ease;
+    }
+    #header-top-row {
+      max-height: 80px;
+      opacity: 1;
+      overflow: hidden;
+      transition: max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease, margin-bottom 0.25s ease;
+    }
+    #main-header.header-shrunk #header-top-row {
+      max-height: 0;
+      opacity: 0;
+      margin-bottom: 0 !important;
+      pointer-events: none;
+    }
+
+    /* توقيع نهاية الصفحة */
+    #site-sign { text-align: center; padding: 28px 16px 8px; user-select: none; }
+    #site-sign .line { display: flex; align-items: center; justify-content: center; gap: 12px; }
+    #site-sign .line::before, #site-sign .line::after {
+      content: ""; height: 1px; width: 56px;
+      background: linear-gradient(to right, transparent, #94a3b8);
+    }
+    #site-sign .line::after { transform: scaleX(-1); }
+    #site-sign .name {
+      direction: ltr; font-family: 'Cairo', sans-serif; font-weight: 900; font-size: 22px;
+      letter-spacing: .12em;
+      background: linear-gradient(90deg, #059669, #0d9488, #2563eb);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+  </style>
+</head>
+<body class="min-h-screen text-slate-800 pb-28">
+
+
+  <!-- الشريط العلوي الثابت (يتقلص تلقائياً مع السحب للأسفل) -->
+  <header id="main-header" style="padding-top: env(safe-area-inset-top);" class="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md text-white shadow-md border-b border-slate-800">
+    <div id="header-inner" class="max-w-6xl mx-auto px-3 sm:px-6 py-2 transition-all duration-200">
+      <!-- العنوان وزر التصفير الشامل -->
+      <div id="header-top-row" class="flex items-center justify-between gap-2 mb-2">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400 shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-sm sm:text-base font-extrabold leading-tight tracking-tight">حاسبة الشيفتات</h1>
+            <p class="text-[10px] text-slate-400 font-medium hidden sm:block">حفظ تلقائي • خانات النواتج محمية</p>
+          </div>
+        </div>
+
+        <button
+          id="resetAllBtn"
+          type="button"
+          onclick="resetCurrentShift()"
+          class="flex items-center gap-1 bg-rose-600 hover:bg-rose-500 active:scale-95 text-white font-bold text-[11px] sm:text-xs px-2.5 py-1.5 rounded-lg shadow-sm transition-all cursor-pointer shrink-0"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+          <span>تصفير الكل</span>
+        </button>
+      </div>
+
+      <!-- تبويبات اختيار الشيفت (تبقى ظاهرة ومدمجة دائماً) -->
+      <div class="grid grid-cols-3 gap-1 bg-slate-800/90 p-0.5 rounded-lg border border-slate-700/70">
+        <button id="tab-long" type="button" onclick="switchShift('long')" class="shift-tab py-1.5 px-2 rounded-md text-xs font-bold transition-all text-center cursor-pointer">
+          شفت ال Long
+        </button>
+        <button id="tab-between" type="button" onclick="switchShift('between')" class="shift-tab py-1.5 px-2 rounded-md text-xs font-bold transition-all text-center cursor-pointer">
+          شفت between
+        </button>
+        <button id="tab-night" type="button" onclick="switchShift('night')" class="shift-tab py-1.5 px-2 rounded-md text-xs font-bold transition-all text-center cursor-pointer">
+          شفت Night
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- المحتوى الرئيسي -->
+  <main class="max-w-6xl mx-auto px-3 sm:px-6 pt-4 space-y-4">
+
+    <!-- شريط إعدادات الشيفت -->
+    <section class="bg-white rounded-2xl p-3 sm:p-4 shadow-sm border border-slate-200/80 flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs font-bold text-slate-500">نظام المعادلات المعتمد:</span>
+        <span id="fixed-method-badge" class="inline-flex items-center gap-1.5 bg-slate-100 text-slate-800 border border-slate-300/80 px-3 py-1.5 rounded-xl text-xs font-extrabold">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+          <span id="fixed-method-label">الأساسية (3 خطوات)</span>
+        </span>
+      </div>
+
+      <!-- أزرار التحكم السريع في الكافتيريات الإضافية (M و 4th floor) -->
+      <div class="flex flex-wrap items-center gap-2 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100">
+        <span class="text-xs font-bold text-slate-500 ml-1">الكافتيريات الإضافية:</span>
+        
+        <button
+          id="pill-m-btn"
+          type="button"
+          onclick="toggleCafeteriaM()"
+          aria-pressed="true"
+          class="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-extrabold transition-all duration-200 cursor-pointer select-none active:scale-95 bg-purple-50 border-purple-300 text-purple-900 shadow-2xs"
+        >
+          <span id="pill-m-dot" class="w-2.5 h-2.5 rounded-full bg-purple-600 transition-transform duration-200"></span>
+          <span>كافتيريا M</span>
+          <span id="pill-m-status" class="text-[10px] px-1.5 py-0.5 rounded-md bg-purple-600 text-white font-bold">مفعّل</span>
+        </button>
+
+        <button
+          id="pill-f4-btn"
+          type="button"
+          onclick="toggleCafeteriaF4()"
+          aria-pressed="false"
+          class="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-extrabold transition-all duration-200 cursor-pointer select-none active:scale-95 bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100"
+        >
+          <span id="pill-f4-dot" class="w-2.5 h-2.5 rounded-full bg-slate-300 transition-transform duration-200"></span>
+          <span>4th floor</span>
+          <span id="pill-f4-status" class="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-200 text-slate-600 font-bold">مخفي</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- شبكة بطاقات الكافتيريات (LG, G, M, 4th floor) -->
+    <section id="cafeterias-grid" class="grid grid-cols-1 lg:grid-cols-3 gap-4"></section>
+
+    <!-- بطاقة الإجمالي المجمع وأزرار النسخ والتسليم -->
+    <section class="bg-gradient-to-l from-emerald-900 via-emerald-800 to-teal-900 text-white rounded-2xl p-4 sm:p-5 shadow-md border border-emerald-700/50">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            <span id="summary-shift-badge" class="bg-emerald-500/30 text-emerald-100 border border-emerald-400/30 text-xs font-bold px-2.5 py-0.5 rounded-full">
+              شفت ال Long
+            </span>
+            <span id="summary-cafes-badge" class="text-xs text-emerald-200 font-medium">
+              (كافتيريا LG + G + M)
+            </span>
+          </div>
+          <h2 class="text-sm sm:text-base font-bold text-emerald-100">إجمالي صافي الكاش للكافتيريات معاً</h2>
+          <div id="grand-cash-total" class="text-3xl sm:text-4xl font-black tracking-tight tabular-nums text-white mt-0.5">
+            0.00
+          </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div class="grid grid-cols-2 gap-2 bg-black/20 rounded-xl p-2.5 border border-white/10 text-xs">
+            <div class="px-2">
+              <div class="text-emerald-200/80 font-semibold">إجمالي المبيعات</div>
+              <div id="grand-sales-total" class="text-sm sm:text-base font-extrabold tabular-nums text-amber-300 mt-0.5">0.00</div>
+            </div>
+            <div class="px-2 border-r border-white/10">
+              <div class="text-emerald-200/80 font-semibold">إجمالي الفيزا</div>
+              <div id="grand-visa-total" class="text-sm sm:text-base font-extrabold tabular-nums text-indigo-200 mt-0.5">0.00</div>
+            </div>
+          </div>
+
+          <!-- عمود الأزرار: نسخ ملخص الشيفت + تسليم الشفت القادم -->
+          <div class="flex flex-col gap-2.5 min-w-[230px]">
+            <button
+              type="button"
+              onclick="copyShiftSummary()"
+              class="flex items-center justify-center gap-2 bg-white text-emerald-950 hover:bg-emerald-50 active:scale-95 font-extrabold text-xs sm:text-sm px-4 py-3 rounded-xl shadow transition-all cursor-pointer"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-emerald-700 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+              </svg>
+              <span>نسخ ملخص الشيفت</span>
+            </button>
+
+            <button
+              type="button"
+              onclick="copyHandoverMessage()"
+              class="flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20bd5a] active:scale-95 text-slate-950 font-black text-xs sm:text-sm px-4 py-3 rounded-xl shadow-md shadow-black/25 transition-all cursor-pointer"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824z"/>
+                <path d="M12 2C6.486 2 2 6.486 2 12c0 1.825.494 3.535 1.352 5.006L2 22l5.132-1.346A9.953 9.953 0 0012 22c5.514 0 10-4.486 10-10S17.514 2 12 2zm0 18c-1.584 0-3.063-.462-4.311-1.258l-.309-.197-3.045.798.813-2.969-.202-.321A7.957 7.957 0 014 12c0-4.411 3.589-8 8-8s8 3.589 8 8-3.589 8-8 8z"/>
+              </svg>
+              <span>تسليم الشفت القادم</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- صندوق معاينة سريعة للرسالة المنسوخة (لضمان التحديد اليدوي أو الإرسال الفوري في أي متصفح) -->
+      <div id="preview-box" class="hidden mt-4 bg-slate-950/70 border border-emerald-400/30 rounded-xl p-3">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+          <span id="preview-title" class="text-xs font-extrabold text-emerald-300">معاينة الرسالة الجاهزة للإرسال:</span>
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              onclick="selectPreviewText()"
+              class="bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold px-2.5 py-1.5 rounded-lg border border-slate-600 cursor-pointer"
+            >
+              تحديد الكل
+            </button>
+            <a
+              id="preview-wa-link"
+              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="bg-[#25D366] hover:bg-[#20bd5a] text-slate-950 text-xs font-black px-3 py-1.5 rounded-lg cursor-pointer inline-flex items-center gap-1"
+            >
+              <span>إرسال عبر واتساب</span>
+            </a>
+            <button
+              type="button"
+              onclick="closePreviewBox()"
+              class="text-slate-400 hover:text-white text-xs font-bold px-2 py-1 cursor-pointer"
+              aria-label="إغلاق المعاينة"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+        <textarea
+          id="preview-textarea"
+          readonly
+          rows="7"
+          class="w-full bg-slate-900/90 text-slate-100 text-xs font-medium p-2.5 rounded-lg border border-slate-700 focus:outline-none leading-relaxed"
+        ></textarea>
+      </div>
+    </section>
+
+  </main>
+
+  <div id="site-sign" aria-hidden="true"><div class="line"><span class="name">A.Rhman</span></div></div>
+
+
+  <!-- إشعار منبثق (Toast) -->
+  <div id="toast-container" class="fixed bottom-4 left-3 right-3 sm:left-auto sm:right-6 sm:w-96 z-50 pointer-events-none flex flex-col gap-2"></div>
+
+  <script>
+    const STORAGE_KEY = 'cafeteria_shift_calculator_v2';
+
+    const SHIFT_META = {
+      long: { label: 'شفت ال Long', fixedMethod: 'basic', methodLabel: 'الأساسية (3 خطوات) — مثبتة', defaultIncludeM: true },
+      between: { label: 'شفت between', fixedMethod: 'basic', methodLabel: 'الأساسية (3 خطوات) — مثبتة', defaultIncludeM: true },
+      night: { label: 'شفت Night', fixedMethod: 'extended', methodLabel: 'الموسعة (5 خطوات) — مثبتة', defaultIncludeM: true },
+    };
+
+    const CAFETERIAS = [
+      { id: 'lg', name: 'كافتيريا LG', badgeColor: 'bg-blue-600' },
+      { id: 'g', name: 'كافتيريا G', badgeColor: 'bg-teal-600' },
+      { id: 'm', name: 'كافتيريا M', badgeColor: 'bg-purple-600' },
+      { id: 'f4', name: 'كافتيريا 4th floor', badgeColor: 'bg-amber-500' },
+    ];
+
+    function createEmptyCafeInputs() {
+      return {
+        totalToday: '',
+        prevShift: '',
+        currentVal: '',
+        totalVisa: '',
+        prevVisa: '',
+        summaryVisa: '',
+      };
+    }
+
+    function createDefaultState() {
+      return {
+        activeShift: 'long',
+        shifts: {
+          long: {
+            method: 'basic',
+            includeM: true,
+            includeF4: false,
+            cafes: { lg: createEmptyCafeInputs(), g: createEmptyCafeInputs(), m: createEmptyCafeInputs(), f4: createEmptyCafeInputs() },
+          },
+          between: {
+            method: 'basic',
+            includeM: true,
+            includeF4: false,
+            cafes: { lg: createEmptyCafeInputs(), g: createEmptyCafeInputs(), m: createEmptyCafeInputs(), f4: createEmptyCafeInputs() },
+          },
+          night: {
+            method: 'extended',
+            includeM: true,
+            includeF4: false,
+            cafes: { lg: createEmptyCafeInputs(), g: createEmptyCafeInputs(), m: createEmptyCafeInputs(), f4: createEmptyCafeInputs() },
+          },
+        },
+      };
+    }
+
+    let appState = loadState();
+    let undoBackup = null;
+    let toastTimeout = null;
+
+    function loadState() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          const def = createDefaultState();
+          return {
+            activeShift: parsed.activeShift || def.activeShift,
+            shifts: {
+              long: { ...def.shifts.long, ...(parsed.shifts?.long || {}), cafes: { ...def.shifts.long.cafes, ...(parsed.shifts?.long?.cafes || {}) } },
+              between: { ...def.shifts.between, ...(parsed.shifts?.between || {}), cafes: { ...def.shifts.between.cafes, ...(parsed.shifts?.between?.cafes || {}) } },
+              night: { ...def.shifts.night, ...(parsed.shifts?.night || {}), cafes: { ...def.shifts.night.cafes, ...(parsed.shifts?.night?.cafes || {}) } },
+            },
+          };
+        }
+      } catch (e) {
+        // تجاهل أخطاء التخزين في الوضع الخاص أو الإطارات المقيدة
+      }
+      return createDefaultState();
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+      } catch (e) {
+        // تجاهل أخطاء التخزين بصمت
+      }
+    }
+
+    function formatNumber(num) {
+      const val = Number.isFinite(num) ? num : 0;
+      return val.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+    }
+
+    function formatRawInputNumber(val) {
+      if (val === '' || val === null || val === undefined) return '0';
+      const cleaned = String(val).replace(/,/g, '').trim();
+      const num = parseFloat(cleaned);
+      if (!Number.isFinite(num)) return '0';
+      return String(num);
+    }
+
+    function parseNum(val) {
+      if (val === '' || val === null || val === undefined) return 0;
+      const cleaned = String(val).replace(/,/g, '').trim();
+      const num = parseFloat(cleaned);
+      return Number.isFinite(num) ? num : 0;
+    }
+
+    function calculateCafe(inputs, method) {
+      const totalToday = parseNum(inputs.totalToday);
+      const prevShift = parseNum(inputs.prevShift);
+      const currentVal = parseNum(inputs.currentVal);
+      const totalVisa = parseNum(inputs.totalVisa);
+      const prevVisa = parseNum(inputs.prevVisa);
+      const summaryVisa = parseNum(inputs.summaryVisa);
+
+      if (method === 'basic') {
+        const resA = totalToday - prevShift;
+        const resB = totalVisa - prevVisa;
+        const resC = resA - resB;
+        return {
+          resA,
+          resB,
+          resC,
+          netSales: resA,
+          netVisa: resB,
+          netCash: resC,
+        };
+      } else {
+        const resA = totalToday - prevShift;
+        const resB = resA + currentVal;
+        const resC = totalVisa - prevVisa;
+        const resD = resC + summaryVisa;
+        const netCash = resB - resD;
+        return {
+          resA,
+          resB,
+          resC,
+          resD,
+          netSales: resB,
+          netVisa: resD,
+          netCash,
+        };
+      }
+    }
+
+    function switchShift(shiftKey) {
+      appState.activeShift = shiftKey;
+      appState.shifts[shiftKey].method = SHIFT_META[shiftKey].fixedMethod;
+      saveState();
+      renderApp();
+    }
+
+    function toggleCafeteriaM() {
+      const current = appState.shifts[appState.activeShift];
+      current.includeM = !current.includeM;
+      saveState();
+      renderApp();
+    }
+
+    function toggleCafeteriaF4() {
+      const current = appState.shifts[appState.activeShift];
+      current.includeF4 = !current.includeF4;
+      saveState();
+      renderApp();
+    }
+
+    function getActiveCafes(shiftData) {
+      return CAFETERIAS.filter(c => {
+        if (c.id === 'm') return shiftData.includeM;
+        if (c.id === 'f4') return shiftData.includeF4;
+        return true;
+      });
+    }
+
+    function handleInputChange(cafeId, fieldKey, rawValue) {
+      appState.shifts[appState.activeShift].cafes[cafeId][fieldKey] = rawValue;
+      saveState();
+      updateCalculatedDisplays();
+    }
+
+    function handleInputFocus(el) {
+      if (el.value === '0' || el.value === '0.00') {
+        el.select();
+      }
+    }
+
+    function resetSingleCafe(cafeId) {
+      const shiftKey = appState.activeShift;
+      const shiftData = appState.shifts[shiftKey];
+      const cafeName = CAFETERIAS.find(c => c.id === cafeId)?.name || '';
+
+      undoBackup = {
+        shiftKey,
+        cafes: JSON.parse(JSON.stringify(shiftData.cafes)),
+      };
+
+      shiftData.cafes[cafeId] = createEmptyCafeInputs();
+      saveState();
+      renderApp();
+      showToast(`تم تصفير مدخلات ${cafeName}`, true);
+    }
+
+    function resetCurrentShift() {
+      const shiftKey = appState.activeShift;
+      const shiftData = appState.shifts[shiftKey];
+
+      undoBackup = {
+        shiftKey,
+        cafes: JSON.parse(JSON.stringify(shiftData.cafes)),
+      };
+
+      shiftData.cafes = {
+        lg: createEmptyCafeInputs(),
+        g: createEmptyCafeInputs(),
+        m: createEmptyCafeInputs(),
+        f4: createEmptyCafeInputs(),
+      };
+
+      saveState();
+      renderApp();
+      showToast(`تم مسح جميع المدخلات في ${SHIFT_META[shiftKey].label}`, true);
+    }
+
+    function undoLastReset() {
+      if (!undoBackup) return;
+      appState.activeShift = undoBackup.shiftKey;
+      appState.shifts[undoBackup.shiftKey].cafes = undoBackup.cafes;
+      undoBackup = null;
+      saveState();
+      renderApp();
+      showToast('تم استرجاع الأرقام بنجاح ✓', false);
+    }
+
+    function updateCalculatedDisplays() {
+      const shiftData = appState.shifts[appState.activeShift];
+      const activeCafes = getActiveCafes(shiftData);
+
+      let grandCash = 0;
+      let grandSales = 0;
+      let grandVisa = 0;
+
+      activeCafes.forEach(cafe => {
+        const calc = calculateCafe(shiftData.cafes[cafe.id], shiftData.method);
+        grandCash += calc.netCash;
+        grandSales += calc.netSales;
+        grandVisa += calc.netVisa;
+
+        const elA = document.getElementById(`out-${cafe.id}-a`);
+        const elB = document.getElementById(`out-${cafe.id}-b`);
+        const elC = document.getElementById(`out-${cafe.id}-c`);
+        const elD = document.getElementById(`out-${cafe.id}-d`);
+        const elCash = document.getElementById(`out-${cafe.id}-cash`);
+
+        if (elA) elA.textContent = formatNumber(calc.resA);
+        if (elB) elB.textContent = formatNumber(calc.resB);
+        if (elC) elC.textContent = formatNumber(calc.resC);
+        if (elD) elD.textContent = formatNumber(calc.resD);
+        if (elCash) {
+          elCash.textContent = formatNumber(calc.netCash);
+          if (calc.netCash < 0) {
+            elCash.classList.add('text-rose-700');
+            elCash.classList.remove('text-emerald-900');
+          } else {
+            elCash.classList.remove('text-rose-700');
+            elCash.classList.add('text-emerald-900');
+          }
+        }
+      });
+
+      const grandCashEl = document.getElementById('grand-cash-total');
+      const grandSalesEl = document.getElementById('grand-sales-total');
+      const grandVisaEl = document.getElementById('grand-visa-total');
+
+      if (grandCashEl) grandCashEl.textContent = formatNumber(grandCash);
+      if (grandSalesEl) grandSalesEl.textContent = formatNumber(grandSales);
+      if (grandVisaEl) grandVisaEl.textContent = formatNumber(grandVisa);
+    }
+
+    function buildInputRow(cafeId, fieldKey, label, value) {
+      const safeVal = value !== undefined && value !== null ? String(value) : '';
+      return `
+        <div class="flex items-center justify-between gap-2 bg-slate-50/90 hover:bg-slate-100/70 rounded-xl px-3 py-2 border border-slate-200/80 transition-colors">
+          <label for="inp-${cafeId}-${fieldKey}" class="text-xs sm:text-sm font-bold text-slate-700 leading-snug cursor-pointer select-none">
+            ${label}
+          </label>
+          <input
+            id="inp-${cafeId}-${fieldKey}"
+            type="number"
+            inputmode="decimal"
+            step="any"
+            placeholder="0.00"
+            value="${safeVal}"
+            onfocus="handleInputFocus(this)"
+            oninput="handleInputChange('${cafeId}', '${fieldKey}', this.value)"
+            class="w-32 sm:w-36 text-left font-extrabold text-sm sm:text-base text-blue-700 bg-white border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-lg px-2.5 py-1.5 outline-none tabular-nums placeholder:text-slate-300 transition-all"
+          />
+        </div>
+      `;
+    }
+
+    function buildResultRow(elementId, label, theme) {
+      const styles = {
+        amber: 'bg-amber-50/90 border-amber-200/90 text-amber-900',
+        'amber-strong': 'bg-amber-100/90 border-amber-300 text-amber-950',
+        indigo: 'bg-indigo-50/90 border-indigo-200/90 text-indigo-900',
+        'indigo-strong': 'bg-indigo-100/90 border-indigo-300 text-indigo-950',
+      };
+      const cls = styles[theme] || styles.amber;
+
+      return `
+        <div class="flex items-center justify-between gap-2 rounded-xl px-3 py-2 border ${cls} select-none">
+          <div class="flex items-center gap-1.5">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 opacity-60 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            <span class="text-xs sm:text-sm font-extrabold">${label}</span>
+          </div>
+          <span id="${elementId}" class="text-sm sm:text-base font-black tabular-nums">0.00</span>
+        </div>
+      `;
+    }
+
+    function buildFinalCashRow(elementId, label) {
+      return `
+        <div class="flex items-center justify-between gap-2 rounded-xl px-3.5 py-3 bg-emerald-50 border-2 border-emerald-400/80 shadow-xs select-none">
+          <span class="text-xs sm:text-sm font-black text-emerald-950">${label}</span>
+          <span id="${elementId}" class="text-lg sm:text-xl font-black text-emerald-900 tabular-nums">0.00</span>
+        </div>
+      `;
+    }
+
+    function renderCafeCard(cafe, inputs, method) {
+      const isBasic = method === 'basic';
+
+      const rowsHtml = isBasic
+        ? `
+          <div class="space-y-2.5">
+            ${buildInputRow(cafe.id, 'totalToday', 'توتال اليوم حتى الآن', inputs.totalToday)}
+            ${buildInputRow(cafe.id, 'prevShift', 'رقم الشيفت السابق', inputs.prevShift)}
+            ${buildResultRow(`out-${cafe.id}-a`, 'ناتج A (صافي المبيعات)', 'amber')}
+          </div>
+
+          <div class="border-t border-dashed border-slate-200 my-3"></div>
+
+          <div class="space-y-2.5">
+            ${buildInputRow(cafe.id, 'totalVisa', 'توتال الفيزا حتى الآن', inputs.totalVisa)}
+            ${buildInputRow(cafe.id, 'prevVisa', 'فيزا الشيفت السابق', inputs.prevVisa)}
+            ${buildResultRow(`out-${cafe.id}-b`, 'ناتج B (فيزا الشيفت)', 'indigo')}
+          </div>
+
+          <div class="border-t border-slate-200 my-3"></div>
+
+          ${buildFinalCashRow(`out-${cafe.id}-cash`, 'ناتج C (توتال الكاش فقط)')}
+        `
+        : `
+          <div class="space-y-2.5">
+            ${buildInputRow(cafe.id, 'totalToday', 'توتال اليوم', inputs.totalToday)}
+            ${buildInputRow(cafe.id, 'prevShift', 'الرقم من الشفت السابق', inputs.prevShift)}
+            ${buildResultRow(`out-${cafe.id}-a`, 'الناتج A (الفرق)', 'amber')}
+            ${buildInputRow(cafe.id, 'currentVal', 'الرقم الحالي', inputs.currentVal)}
+            ${buildResultRow(`out-${cafe.id}-b`, 'الناتج B (إجمالي المبيعات)', 'amber-strong')}
+          </div>
+
+          <div class="border-t border-dashed border-slate-200 my-3"></div>
+
+          <div class="space-y-2.5">
+            ${buildInputRow(cafe.id, 'totalVisa', 'توتال اليوم في الفيزا', inputs.totalVisa)}
+            ${buildInputRow(cafe.id, 'prevVisa', 'توتال فيزا الشفت السابق', inputs.prevVisa)}
+            ${buildResultRow(`out-${cafe.id}-c`, 'الناتج C (فرق الفيزا)', 'indigo')}
+            ${buildInputRow(cafe.id, 'summaryVisa', 'ملخص اليوم من الفيزا', inputs.summaryVisa)}
+            ${buildResultRow(`out-${cafe.id}-d`, 'الناتج D (إجمالي الفيزا)', 'indigo-strong')}
+          </div>
+
+          <div class="border-t border-slate-200 my-3"></div>
+
+          ${buildFinalCashRow(`out-${cafe.id}-cash`, 'توتال الكاش فقط (B - D)')}
+        `;
+
+      return `
+        <article class="bg-white rounded-2xl shadow-sm border border-slate-200/90 overflow-hidden flex flex-col">
+          <div class="bg-slate-800 text-white px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <span class="w-3 h-3 rounded-full ${cafe.badgeColor} ring-2 ring-white/30"></span>
+              <h3 class="font-extrabold text-base sm:text-lg tracking-wide">${cafe.name}</h3>
+            </div>
+            <button
+              type="button"
+              onclick="resetSingleCafe('${cafe.id}')"
+              class="text-xs font-bold bg-slate-700/90 hover:bg-rose-600 text-slate-200 hover:text-white px-2.5 py-1.5 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span>تصفير</span>
+            </button>
+          </div>
+          <div class="p-3.5 sm:p-4 flex-1 flex flex-col justify-between">
+            ${rowsHtml}
+          </div>
+        </article>
+      `;
+    }
+
+    function renderApp() {
+      const shiftKey = appState.activeShift;
+      const shiftData = appState.shifts[shiftKey];
+      // فرض النظام المثبت لكل شيفت (Long و between على الأساسية 3 خطوات، و Night على الموسعة 5 خطوات)
+      shiftData.method = SHIFT_META[shiftKey].fixedMethod;
+
+      ['long', 'between', 'night'].forEach(key => {
+        const btn = document.getElementById(`tab-${key}`);
+        if (!btn) return;
+        if (key === shiftKey) {
+          btn.className = 'shift-tab py-1.5 px-2 rounded-md text-xs font-extrabold transition-all text-center cursor-pointer bg-emerald-500 text-slate-950 shadow-xs';
+        } else {
+          btn.className = 'shift-tab py-1.5 px-2 rounded-md text-xs font-bold transition-all text-center cursor-pointer text-slate-300 hover:text-white hover:bg-slate-700/60';
+        }
+      });
+
+      const methodLabelEl = document.getElementById('fixed-method-label');
+      if (methodLabelEl) {
+        methodLabelEl.textContent = SHIFT_META[shiftKey].methodLabel;
+      }
+
+      // تحديث تصميم زر كافتيريا M
+      const pillMBtn = document.getElementById('pill-m-btn');
+      const pillMDot = document.getElementById('pill-m-dot');
+      const pillMStatus = document.getElementById('pill-m-status');
+      if (pillMBtn && pillMDot && pillMStatus) {
+        pillMBtn.setAttribute('aria-pressed', String(shiftData.includeM));
+        if (shiftData.includeM) {
+          pillMBtn.className = 'group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-extrabold transition-all duration-200 cursor-pointer select-none active:scale-95 bg-purple-50 border-purple-300 text-purple-950 shadow-2xs';
+          pillMDot.className = 'w-2.5 h-2.5 rounded-full bg-purple-600 ring-2 ring-purple-200';
+          pillMStatus.className = 'text-[10px] px-1.5 py-0.5 rounded-md bg-purple-600 text-white font-bold';
+          pillMStatus.textContent = 'مفعّل';
+        } else {
+          pillMBtn.className = 'group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-extrabold transition-all duration-200 cursor-pointer select-none active:scale-95 bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100';
+          pillMDot.className = 'w-2.5 h-2.5 rounded-full bg-slate-300';
+          pillMStatus.className = 'text-[10px] px-1.5 py-0.5 rounded-md bg-slate-200 text-slate-600 font-bold';
+          pillMStatus.textContent = 'مخفي';
+        }
+      }
+
+      // تحديث تصميم زر كافتيريا 4th floor
+      const pillF4Btn = document.getElementById('pill-f4-btn');
+      const pillF4Dot = document.getElementById('pill-f4-dot');
+      const pillF4Status = document.getElementById('pill-f4-status');
+      if (pillF4Btn && pillF4Dot && pillF4Status) {
+        pillF4Btn.setAttribute('aria-pressed', String(shiftData.includeF4));
+        if (shiftData.includeF4) {
+          pillF4Btn.className = 'group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-extrabold transition-all duration-200 cursor-pointer select-none active:scale-95 bg-amber-50 border-amber-300 text-amber-950 shadow-2xs';
+          pillF4Dot.className = 'w-2.5 h-2.5 rounded-full bg-amber-500 ring-2 ring-amber-200';
+          pillF4Status.className = 'text-[10px] px-1.5 py-0.5 rounded-md bg-amber-500 text-slate-950 font-black';
+          pillF4Status.textContent = 'مفعّل';
+        } else {
+          pillF4Btn.className = 'group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-extrabold transition-all duration-200 cursor-pointer select-none active:scale-95 bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100';
+          pillF4Dot.className = 'w-2.5 h-2.5 rounded-full bg-slate-300';
+          pillF4Status.className = 'text-[10px] px-1.5 py-0.5 rounded-md bg-slate-200 text-slate-600 font-bold';
+          pillF4Status.textContent = 'مخفي';
+        }
+      }
+
+      const activeCafes = getActiveCafes(shiftData);
+
+      const shiftBadge = document.getElementById('summary-shift-badge');
+      const cafesBadge = document.getElementById('summary-cafes-badge');
+      if (shiftBadge) shiftBadge.textContent = SHIFT_META[shiftKey].label;
+      if (cafesBadge) {
+        const names = ['LG', 'G'];
+        if (shiftData.includeM) names.push('M');
+        if (shiftData.includeF4) names.push('4th floor');
+        cafesBadge.textContent = `(كافتيريا ${names.join(' + ')})`;
+      }
+
+      const grid = document.getElementById('cafeterias-grid');
+      if (activeCafes.length === 2) {
+        grid.className = 'grid grid-cols-1 md:grid-cols-2 gap-4';
+      } else if (activeCafes.length === 4) {
+        grid.className = 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4';
+      } else {
+        grid.className = 'grid grid-cols-1 lg:grid-cols-3 gap-4';
+      }
+
+      grid.innerHTML = activeCafes
+        .map(cafe => renderCafeCard(cafe, shiftData.cafes[cafe.id], shiftData.method))
+        .join('');
+
+      updateCalculatedDisplays();
+    }
+
+    /**
+     * الزر الأول: نسخ ملخص الشيفت الكامل
+     */
+    function copyShiftSummary() {
+      const shiftKey = appState.activeShift;
+      const shiftData = appState.shifts[shiftKey];
+      const activeCafes = getActiveCafes(shiftData);
+
+      const todayStr = new Date().toLocaleDateString('ar-EG', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      });
+
+      let lines = [
+        `�� *تقرير ${SHIFT_META[shiftKey].label}* (${todayStr})`,
+        `──────────────────`,
+      ];
+
+      let totalCashAll = 0;
+      let totalVisaAll = 0;
+      let totalSalesAll = 0;
+
+      activeCafes.forEach(cafe => {
+        const calc = calculateCafe(shiftData.cafes[cafe.id], shiftData.method);
+        totalCashAll += calc.netCash;
+        totalVisaAll += calc.netVisa;
+        totalSalesAll += calc.netSales;
+
+        lines.push(`�� *${cafe.name}:*`);
+        lines.push(`• صافي المبيعات: ${formatNumber(calc.netSales)}`);
+        lines.push(`• إجمالي الفيزا: ${formatNumber(calc.netVisa)}`);
+        lines.push(`• *صافي الكاش: ${formatNumber(calc.netCash)}*`);
+        lines.push(``);
+      });
+
+      lines.push(`──────────────────`);
+      lines.push(`�� *إجمالي الكاش الكلي: ${formatNumber(totalCashAll)}*`);
+      lines.push(`�� إجمالي الفيزا الكلي: ${formatNumber(totalVisaAll)}`);
+      lines.push(`�� إجمالي المبيعات الكلي: ${formatNumber(totalSalesAll)}`);
+
+      const reportText = lines.join('\n');
+      showPreviewBox('ملخص الشيفت المنسوخ:', reportText);
+      copyTextToClipboard(reportText, 'تم نسخ ملخص الشيفت بنجاح ✓', reportText);
+    }
+
+    /**
+     * الزر الثاني: تسليم الشفت القادم
+     * - شفت long و between: توتال اليوم حتى الآن + توتال الفيزا حتى الآن فقط لكل كافتيريا
+     * - شفت night: الرقم الحالي + ملخص اليوم من الفيزا فقط لكل كافتيريا
+     * - الصيغة: اسم الكافتيريا متبوعاً بسطر سيستم = ... وسطر فيزا = ...
+     * - يتم استبعاد كافتيريا M تلقائياً إذا كانت مخفية من زر التضمين
+     */
+    function copyHandoverMessage() {
+      const shiftKey = appState.activeShift;
+      const shiftData = appState.shifts[shiftKey];
+      const activeCafes = getActiveCafes(shiftData);
+
+      const todayStr = new Date().toLocaleDateString('ar-EG', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      });
+
+      const header = `تسليم ${SHIFT_META[shiftKey].label} (${todayStr})`;
+
+      const blocks = activeCafes.map(cafe => {
+        const inputs = shiftData.cafes[cafe.id];
+
+        if (shiftKey === 'night') {
+          const currentValStr = formatRawInputNumber(inputs.currentVal);
+          const summaryVisaStr = formatRawInputNumber(inputs.summaryVisa);
+          return `${cafe.name}\nسيستم = ${currentValStr}\nفيزا = ${summaryVisaStr}`;
+        } else {
+          const totalTodayStr = formatRawInputNumber(inputs.totalToday);
+          const totalVisaStr = formatRawInputNumber(inputs.totalVisa);
+          return `${cafe.name}\nسيستم = ${totalTodayStr}\nفيزا = ${totalVisaStr}`;
+        }
+      });
+
+      const messageText = `${header}\n\n${blocks.join('\n\n')}`;
+      showPreviewBox('رسالة تسليم الشفت القادم:', messageText);
+      copyTextToClipboard(messageText, 'تم نسخ بيانات تسليم الشفت بنجاح ✓', messageText);
+    }
+
+    /**
+     * عرض صندوق المعاينة السريعة لتمكين التحديد اليدوي أو الإرسال المباشر عبر واتساب
+     */
+    function showPreviewBox(title, text) {
+      const box = document.getElementById('preview-box');
+      const titleEl = document.getElementById('preview-title');
+      const textarea = document.getElementById('preview-textarea');
+      const waLink = document.getElementById('preview-wa-link');
+
+      if (!box || !textarea) return;
+      if (titleEl) titleEl.textContent = title;
+      textarea.value = text;
+      if (waLink) {
+        waLink.href = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+      }
+      box.classList.remove('hidden');
+    }
+
+    function selectPreviewText() {
+      const textarea = document.getElementById('preview-textarea');
+      if (!textarea) return;
+      textarea.focus();
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        showToast('تم تحديد النص ونسخه ✓', false);
+      } catch (e) {}
+    }
+
+    function closePreviewBox() {
+      const box = document.getElementById('preview-box');
+      if (box) box.classList.add('hidden');
+    }
+
+    /**
+     * إرجاع التاريخ المناسب للشيفت (اليوم السابق في شفت Night، واليوم الحالي لباقي الشيفتات)
+     */
+    function getShiftDateString(shiftKey) {
+      const targetDate = new Date();
+      if (shiftKey === 'night') {
+        targetDate.setDate(targetDate.getDate() - 1);
+      }
+      return targetDate.toLocaleDateString('ar-EG', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      });
+    }
+
+    /**
+     * الزر الأول: نسخ ملخص الشيفت الكامل
+     */
+    function copyShiftSummary() {
+      const shiftKey = appState.activeShift;
+      const shiftData = appState.shifts[shiftKey];
+      const activeCafes = getActiveCafes(shiftData);
+
+      const todayStr = getShiftDateString(shiftKey);
+
+      let lines = [
+        `�� *تقرير ${SHIFT_META[shiftKey].label}* (${todayStr})`,
+        `──────────────────`,
+      ];
+
+      let totalCashAll = 0;
+      let totalVisaAll = 0;
+      let totalSalesAll = 0;
+
+      activeCafes.forEach(cafe => {
+        const calc = calculateCafe(shiftData.cafes[cafe.id], shiftData.method);
+        totalCashAll += calc.netCash;
+        totalVisaAll += calc.netVisa;
+        totalSalesAll += calc.netSales;
+
+        lines.push(`�� *${cafe.name}:*`);
+        lines.push(`• صافي المبيعات: ${formatNumber(calc.netSales)}`);
+        lines.push(`• إجمالي الفيزا: ${formatNumber(calc.netVisa)}`);
+        lines.push(`• *صافي الكاش: ${formatNumber(calc.netCash)}*`);
+        lines.push(``);
+      });
+
+      lines.push(`──────────────────`);
+      lines.push(`�� *إجمالي الكاش الكلي: ${formatNumber(totalCashAll)}*`);
+      lines.push(`�� إجمالي الفيزا الكلي: ${formatNumber(totalVisaAll)}`);
+      lines.push(`�� إجمالي المبيعات الكلي: ${formatNumber(totalSalesAll)}`);
+
+      const reportText = lines.join('\n');
+      showPreviewBox('ملخص الشيفت المنسوخ:', reportText);
+      copyTextToClipboard(reportText, 'تم نسخ ملخص الشيفت بنجاح ✓', reportText);
+    }
+
+    /**
+     * الزر الثاني: تسليم الشفت القادم
+     */
+    function copyHandoverMessage() {
+      const shiftKey = appState.activeShift;
+      const shiftData = appState.shifts[shiftKey];
+      const activeCafes = getActiveCafes(shiftData);
+
+      const todayStr = getShiftDateString(shiftKey);
+      const header = `تسليم ${SHIFT_META[shiftKey].label} (${todayStr})`;
+
+      const blocks = activeCafes.map(cafe => {
+        const inputs = shiftData.cafes[cafe.id];
+
+        if (shiftKey === 'night') {
+          const currentValStr = formatRawInputNumber(inputs.currentVal);
+          const summaryVisaStr = formatRawInputNumber(inputs.summaryVisa);
+          return `${cafe.name}\nسيستم = ${currentValStr}\nفيزا = ${summaryVisaStr}`;
+        } else {
+          const totalTodayStr = formatRawInputNumber(inputs.totalToday);
+          const totalVisaStr = formatRawInputNumber(inputs.totalVisa);
+          return `${cafe.name}\nسيستم = ${totalTodayStr}\nفيزا = ${totalVisaStr}`;
+        }
+      });
+
+      const messageText = `${header}\n\n${blocks.join('\n\n')}`;
+      showPreviewBox('رسالة تسليم الشفت القادم:', messageText);
+      copyTextToClipboard(messageText, 'تم نسخ بيانات تسليم الشفت بنجاح ✓', messageText);
+    }
+
+    /**
+     * آلية نسخ مزدوجة وموثوقة 100% تعمل في كل المتصفحات وداخل الإطارات المقيدة (Sandboxed Iframes)
+     */
+    function fallbackExecCommandCopy(text) {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.setAttribute('readonly', '');
+      textArea.style.position = 'fixed';
+      textArea.style.top = '0';
+      textArea.style.left = '0';
+      textArea.style.width = '2em';
+      textArea.style.height = '2em';
+      textArea.style.padding = '0';
+      textArea.style.border = 'none';
+      textArea.style.outline = 'none';
+      textArea.style.boxShadow = 'none';
+      textArea.style.background = 'transparent';
+      textArea.style.opacity = '0';
+
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      textArea.setSelectionRange(0, 999999);
+
+      let copied = false;
+      try {
+        copied = document.execCommand('copy');
+      } catch (err) {
+        copied = false;
+      }
+      document.body.removeChild(textArea);
+      return copied;
+    }
+
+    function copyTextToClipboard(text, successMessage, whatsappShareText = null) {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        navigator.clipboard.writeText(text)
+          .then(() => {
+            showToast(successMessage, false, whatsappShareText);
+          })
+          .catch(() => {
+            const ok = fallbackExecCommandCopy(text);
+            showToast(
+              ok ? successMessage : 'الرسالة جاهزة بالأسفل — اضغط إرسال عبر واتساب أو تحديد الكل',
+              false,
+              whatsappShareText
+            );
+          });
+      } else {
+        const ok = fallbackExecCommandCopy(text);
+        showToast(
+          ok ? successMessage : 'الرسالة جاهزة بالأسفل — اضغط إرسال عبر واتساب أو تحديد الكل',
+          false,
+          whatsappShareText
+        );
+      }
+    }
+
+    function showToast(message, allowUndo, whatsappShareText = null) {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+
+      if (toastTimeout) clearTimeout(toastTimeout);
+
+      let actionBtnHtml = '';
+      if (allowUndo) {
+        actionBtnHtml = `<button type="button" onclick="undoLastReset()" class="bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold text-xs px-3 py-1.5 rounded-lg shrink-0 cursor-pointer transition-colors">تراجع</button>`;
+      } else if (whatsappShareText) {
+        const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(whatsappShareText)}`;
+        actionBtnHtml = `<a href="${waUrl}" target="_blank" rel="noopener noreferrer" class="bg-[#25D366] hover:bg-[#20bd5a] text-slate-950 font-black text-xs px-3 py-1.5 rounded-lg shrink-0 cursor-pointer transition-colors">إرسال عبر واتساب</a>`;
+      }
+
+      container.innerHTML = `
+        <div class="toast-animate pointer-events-auto bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl border border-slate-700 flex items-center justify-between gap-3">
+          <span class="text-xs sm:text-sm font-bold leading-snug">${message}</span>
+          ${actionBtnHtml}
+        </div>
+      `;
+
+      toastTimeout = setTimeout(() => {
+        container.innerHTML = '';
+        undoBackup = null;
+      }, 6000);
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      renderApp();
+    });
+
+    // تقليص البانر العلوي تلقائياً عند السحب للأسفل وإعادته عند العودة للأعلى
+    let isHeaderShrunk = false;
+    window.addEventListener('scroll', () => {
+      const header = document.getElementById('main-header');
+      const inner = document.getElementById('header-inner');
+      if (!header || !inner) return;
+
+      const y = window.scrollY || document.documentElement.scrollTop;
+      if (y > 35 && !isHeaderShrunk) {
+        isHeaderShrunk = true;
+        header.classList.add('header-shrunk');
+        inner.classList.remove('py-2');
+        inner.classList.add('py-1');
+      } else if (y < 12 && isHeaderShrunk) {
+        isHeaderShrunk = false;
+        header.classList.remove('header-shrunk');
+        inner.classList.remove('py-1');
+        inner.classList.add('py-2');
+      }
+    }, { passive: true });
+  </script>
+</body>
+</html>
